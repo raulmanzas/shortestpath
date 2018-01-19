@@ -9,11 +9,50 @@ def find_shortest_path(graph):
     """
     Computes the shortest path to each node in every level of the graph.
     """
-    levels, nodes, distances, weights = parse_graph_repr(graph)
-    comm = MPI.COMM_WORLD
+    levels = 0
+    nodes = 0
+    distances = {}
+    weights = {}
 
-    for level in range(2, levels + 1):
-        distances[level] = [];
+    comm = MPI.COMM_WORLD
+    # this implementation assumes the number of processes to be equal the number of nodes in a level + 1
+    num_processes = comm.Get_size()
+    rank = comm.Get_rank()
+
+    if rank == 0:
+        levels, nodes, distances, weights = parse_graph_repr(graph)
+        for level in range(2, levels + 1):
+            for next_level_node in range(0, nodes):
+                destination = next_level_node + 1
+                comm.send(distances[level - 1], dest = destination)
+                comm.send(weights[level - 1], dest = destination)
+                comm.send(next_level_node, dest = destination)
+    else:
+        distances = comm.recv(source = 0)
+        weights = comm.recv(source = 0)
+        next_level_node = comm.recv(source = 0)
+        # data distribution between processes works fine
+        
+        print('I am process ' + str(rank) + ' and I received node ' + str(next_level_node))
+        print('Distances: ')
+        print(weights)
+
+
+    # for level in range(2, levels + 1):
+    #     distances[level] = []
+    #     # main process needs to send a copy of distances array and weights matrix to 'worker processes'
+    #     for next_level_node in range(0, nodes):
+    #         node_distances = [] # local in each process
+    #         for current_level_node in range(0, nodes):
+    #             # only the copy in this level should be sent to worker processes to save memory and comm time
+    #             distance = weights[level][current_level_node][next_level_node] + distances[level - 1][current_level_node]
+    #             node_distances.append(distance)
+    #         # after calculating all distances, find the smallest one and send to main process
+    #         shortest_path = min(node_distances)
+    #         distances[level].append(shortest_path)
+    
+    # print(distances)
+
 
 
 def parse_graph_repr(path):
