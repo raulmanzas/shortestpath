@@ -6,8 +6,15 @@ import yaml
 from mpi4py import MPI
 
 def find_shortest_path(graph):
-    levels, nodes, source_dist, weights = parse_graph_repr(graph)
-    
+    """
+    Computes the shortest path to each node in every level of the graph.
+    """
+    levels, nodes, distances, weights = parse_graph_repr(graph)
+    comm = MPI.COMM_WORLD
+
+    for level in range(2, levels + 1):
+        distances[level] = [];
+
 
 def parse_graph_repr(path):
     with open(path, 'r') as file:
@@ -16,7 +23,9 @@ def parse_graph_repr(path):
     nodes = representation['NodesPerLevel']
     source_dist = representation['SourceDistances']
     weights = representation['Weights']
-    return levels, nodes, source_dist, weights
+    dist = {}
+    dist[1] = source_dist
+    return levels, nodes, dist, weights
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
