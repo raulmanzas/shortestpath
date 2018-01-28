@@ -32,6 +32,11 @@ def find_shortest_path(graph):
         weights = comm.recv(source = 0)
         next_level_node = comm.recv(source = 0)
         # data distribution between processes works fine
+        local_distances = []
+        for node in range(0, len(distances)):
+            dist = distances[node] + weights[node][next_level_node]
+            local_distances.append(dist)
+        
         
         print('I am process ' + str(rank) + ' and I received node ' + str(next_level_node))
         print('Distances: ')
