@@ -37,8 +37,8 @@ def find_shortest_path(graph):
                 distances[level][next_level_node] = shortest_path
         
         # Tells other processes to stop waiting for new tasks
-        for node in range(1, nodes):
-            comm.send(False, dest = destination, tag = SYNC_LEVEL)
+        for node in range(1, nodes + 1):
+            comm.send(False, dest = node, tag = SYNC_LEVEL)
         print(distances)
     else:
         # All process wait for requests from master process
@@ -57,8 +57,7 @@ def find_shortest_path(graph):
             
             # Computes the shorstest path to next_level_node and sends it back
             comm.send(min(local_distances), 0)
-            comm.recv(source = 0, tag = SYNC_LEVEL)
-    MPI.Finalize()
+            new_level = comm.recv(source = 0, tag = SYNC_LEVEL)
 
 def parse_graph_repr(path):
     with open(path, 'r') as file:
