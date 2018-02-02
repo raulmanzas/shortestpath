@@ -13,13 +13,9 @@ def find_shortest_path(graph):
     """
     Computes the shortest path to each node in every level of the graph.
     """
-    levels = 0
-    nodes = 0
-    distances = {}
-    weights = {}
-
     comm = MPI.COMM_WORLD
-    # this implementation assumes the number of processes to be equal the number of nodes in a level + 1
+    # this implementation assumes the number of processes to be equal the 
+    # number of nodes in a level + 1
     num_processes = comm.Get_size()
     rank = comm.Get_rank()
 
