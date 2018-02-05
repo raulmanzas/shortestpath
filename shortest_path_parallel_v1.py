@@ -3,7 +3,11 @@
 
 import argparse
 import yaml
+import math
 from mpi4py import MPI
+
+# This algortihm assumes that the number of processes is limited
+# in [2, number of nodes].
 
 DISTANCES = 1
 WEIGHTS = 2
@@ -15,28 +19,31 @@ def find_shortest_path(graph):
     Computes the shortest path to each node in every level of the graph.
     """
     comm = MPI.COMM_WORLD
-    # this implementation assumes the number of processes to be equal the 
-    # number of nodes in a level + 1
     num_processes = comm.Get_size()
     rank = comm.Get_rank()
+
     if rank == 0:
         levels, nodes, distances, weights = parse_graph_repr(graph)
+        # How many nodes each process receives
+        nodes_per_proc = math.ceil(nodes/(num_processes - 1))
         for level in range(2, levels + 2):
-            # initializes the distance array for this level
-            distances[level] = [0] * nodes
-            for next_level_node in range(0, nodes):
-                destination = next_level_node + 1
+            node_index = 0
+            destination = 1
+            while(node_index < nodes):
+                nodes_to_compute = range(node_index, node_index + nodes_per_proc)
+                message = [distances[level -1], weights[level - 1], nodes_to_compute]
                 comm.send(True, dest = destination, tag = SYNC_LEVEL)
-                comm.send(distances[level - 1], dest = destination, tag = DISTANCES)
-                comm.send(weights[level - 1], dest = destination, tag = WEIGHTS)
-                comm.send(next_level_node, dest = destination, tag = NODE)
+                comm.send(message, dest = destination)
+                destination += 1
+                node_index += nodes_per_proc
             
-            for next_level_node in range(0, nodes):
-                shortest_path = comm.recv(source = next_level_node + 1)
-                distances[level][next_level_node] = shortest_path
-        
+            distances[level] = []
+            for worker_process in range(1, destination):
+                shortest_paths = comm.recv(source = worker_process)
+                for key in shortest_paths:
+                    distances[level].append(shortest_paths[key])
         # Tells other processes to stop waiting for new tasks
-        for node in range(1, nodes + 1):
+        for node in range(1, num_processes):
             comm.send(False, dest = node, tag = SYNC_LEVEL)
         print(distances)
     else:
@@ -45,17 +52,19 @@ def find_shortest_path(graph):
         while(new_level):
             # Receives from master process all data needed to find the shortest path
             # to node next_level_node
-            distances = comm.recv(source = 0, tag = DISTANCES)
-            weights = comm.recv(source = 0, tag = WEIGHTS)
-            next_level_node = comm.recv(source = 0, tag = NODE)
-            local_distances = []
-
-            for node in range(0, num_processes - 1):
-                dist = distances[node] + weights[node][next_level_node]
-                local_distances.append(dist)
-            
+            message = comm.recv(source = 0)
+            distances = message[0]
+            weights = message[1]
+            next_level_nodes = message[2]
+            shortest_distances = {}
+            for next_level_node in next_level_nodes:
+                local_distances = []
+                for node in range(0, len(weights[0])):
+                    dist = distances[node] + weights[node][next_level_node]
+                    local_distances.append(dist)
+                shortest_distances[next_level_node] = min(local_distances)
             # Computes the shorstest path to next_level_node and sends it back
-            comm.send(min(local_distances), 0)
+            comm.send(shortest_distances, dest = 0)
             new_level = comm.recv(source = 0, tag = SYNC_LEVEL)
 
 def parse_graph_repr(path):

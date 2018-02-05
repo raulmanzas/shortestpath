@@ -16,10 +16,12 @@ def generate_graph_representation(levels, nodes, file_name):
     
     representation += "Weights:\n"
     for level in range(0, levels):
-        representation += "  {0}:\n    -\n".format(level + 1)
-        for node in range(0, nodes):
-            value = random.randint(1, RANDOM_MAX)
-            representation += "      - {0}\n".format(value)
+        representation += "  {0}:\n".format(level + 1)
+        for i in range(0, nodes):
+            representation += "    -\n"
+            for node in range(0, nodes):
+                value = random.randint(1, RANDOM_MAX)
+                representation += "      - {0}\n".format(value)
     
     with open(file_name, 'w') as file:
         file.write(representation)
