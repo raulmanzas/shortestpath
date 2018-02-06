@@ -23,13 +23,13 @@ def find_shortest_path(graph):
     # Data distribution
     if(rank == 0):
         levels, nodes, distances, weights = parse_graph_repr(graph)
-    
+        start_time = MPI.Wtime()
     levels, nodes, distances, weights = comm.bcast([levels, nodes, distances, weights])
+    
     # Computes which range of nodes each process is going to use
     nodes_per_process = math.ceil(nodes/num_processes)
     node_offset = nodes_per_process * rank
     nodes_to_compute = range(node_offset, node_offset + nodes_per_process)
-    print("Process {0} processing nodes: {1}".format(rank, nodes_to_compute))
     # Computing the shortest path for every level
     for level in range(2, levels + 2):
         distances[level] = {}
@@ -45,8 +45,10 @@ def find_shortest_path(graph):
             distances[level] = { k:v[k] for v in distances[level] for k in v}
         distances[level] = comm.bcast(distances[level], root = 0)
     if rank == 0:
-        for level in range(2, levels + 2):
-            print("Level {0}: {1}".format(level, distances[level]))
+        end_time = MPI.Wtime()
+        print(end_time - start_time)
+    #     for level in range(2, levels + 2):
+    #         print("Level {0}: {1}".format(level, distances[level]))
 
 def parse_graph_repr(path):
     with open(path, 'r') as file:

@@ -9,10 +9,7 @@ from mpi4py import MPI
 # This algortihm assumes that the number of processes is limited
 # in [2, number of nodes].
 
-DISTANCES = 1
-WEIGHTS = 2
-NODE = 3
-SYNC_LEVEL = 4
+SYNC_LEVEL = 1
 
 def find_shortest_path(graph):
     """
@@ -24,6 +21,7 @@ def find_shortest_path(graph):
 
     if rank == 0:
         levels, nodes, distances, weights = parse_graph_repr(graph)
+        start_time = MPI.Wtime()
         # How many nodes each process receives
         nodes_per_proc = math.ceil(nodes/(num_processes - 1))
         for level in range(2, levels + 2):
@@ -45,7 +43,8 @@ def find_shortest_path(graph):
         # Tells other processes to stop waiting for new tasks
         for node in range(1, num_processes):
             comm.send(False, dest = node, tag = SYNC_LEVEL)
-        print(distances)
+        end_time = MPI.Wtime()
+        print(end_time - start_time)
     else:
         # All process wait for requests from master process
         new_level = comm.recv(source = 0, tag = SYNC_LEVEL)
